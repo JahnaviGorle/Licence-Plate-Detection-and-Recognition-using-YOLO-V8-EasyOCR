@@ -1,6 +1,6 @@
 # Ultralytics YOLO 🚀, GPL-3.0 license
-
-import hydra
+# IMPORT COMMANDS
+import hydra 
 import torch
 import easyocr
 import cv2
@@ -8,16 +8,16 @@ from ultralytics.yolo.engine.predictor import BasePredictor
 from ultralytics.yolo.utils import DEFAULT_CONFIG, ROOT, ops
 from ultralytics.yolo.utils.checks import check_imgsz
 from ultralytics.yolo.utils.plotting import Annotator, colors, save_one_box
-
+# Extract coordinates
 def getOCR(im, coors):
     x,y,w, h = int(coors[0]), int(coors[1]), int(coors[2]),int(coors[3])
     im = im[y:h,x:w]
     conf = 0.2
-
+# gray scale conversion
     gray = cv2.cvtColor(im , cv2.COLOR_RGB2GRAY)
     results = reader.readtext(gray)
     ocr = ""
-
+#passing of result
     for result in results:
         if len(results) == 1:
             ocr = result[1]
@@ -25,18 +25,18 @@ def getOCR(im, coors):
             ocr = result[1]
     
     return str(ocr)
-
+# defines custom class for yolo detection
 class DetectionPredictor(BasePredictor):
-
+# annotator setup
     def get_annotator(self, img):
         return Annotator(img, line_width=self.args.line_thickness, example=str(self.model.names))
-
+#preprocessing(pytorch)
     def preprocess(self, img):
         img = torch.from_numpy(img).to(self.model.device)
         img = img.half() if self.model.fp16 else img.float()  # uint8 to fp16/32
         img /= 255  # 0 - 255 to 0.0 - 1.0
         return img
-
+#post processing(NMS filter)
     def postprocess(self, preds, img, orig_img):
         preds = ops.non_max_suppression(preds,
                                         self.args.conf,
@@ -49,7 +49,7 @@ class DetectionPredictor(BasePredictor):
             pred[:, :4] = ops.scale_boxes(img.shape[2:], pred[:, :4], shape).round()
 
         return preds
-
+# writing results(image path)
     def write_results(self, idx, preds, batch):
         p, im, im0 = batch
         log_string = ""
@@ -102,8 +102,9 @@ class DetectionPredictor(BasePredictor):
 
         return log_string
 
-
+#loads yolo model
 @hydra.main(version_base=None, config_path=str(DEFAULT_CONFIG.parent), config_name=DEFAULT_CONFIG.name)
+# initializing predictor
 def predict(cfg):
     cfg.model = cfg.model or "yolov8n.pt"
     cfg.imgsz = check_imgsz(cfg.imgsz, min_dim=2)  # check image size
@@ -111,7 +112,7 @@ def predict(cfg):
     predictor = DetectionPredictor(cfg)
     predictor()
 
-
+#entry point
 if __name__ == "__main__":
     reader = easyocr.Reader(['en'])
     predict()
